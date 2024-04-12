@@ -1,0 +1,78 @@
+{
+  "originHash" : "c1404e9449e8140c7cfa8e3310c597905bd2c11ae678ed53b9b40750c52e4b17",
+  "pins" : [
+    {
+      "identity" : "alamofire",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/Alamofire/Alamofire.git",
+      "state" : {
+        "revision" : "f455c2975872ccd2d9c81594c658af65716e9b9a",
+        "version" : "5.9.1"
+      }
+    },
+    {
+      "identity" : "ohhttpstubs",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/AliSoftware/OHHTTPStubs.git",
+      "state" : {
+        "revision" : "12f19662426d0434d6c330c6974d53e2eb10ecd9",
+        "version" : "9.1.0"
+      }
+    },
+    {
+      "identity" : "pull-to-refresh",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/eggswift/pull-to-refresh",
+      "state" : {
+        "revision" : "a858aaeb44abc6428af916e8496429d244fac053",
+        "version" : "2.9.3"
+      }
+    },
+    {
+      "identity" : "reusable",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/AliSoftware/Reusable",
+      "state" : {
+        "revision" : "18674709421360e210c2ecd4e8e08b217d4ea61d",
+        "version" : "4.1.2"
+      }
+    },
+    {
+      "identity" : "rxalamofire",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/RxSwiftCommunity/RxAlamofire",
+      "state" : {
+        "revision" : "ecfa0dd15339f5ea8143233cb7fc664a02ea9d44",
+        "version" : "6.1.0"
+      }
+    },
+    {
+      "identity" : "rxswift",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/ReactiveX/RxSwift.git",
+      "state" : {
+        "revision" : "9dcaa4b333db437b0fbfaf453fad29069044a8b4",
+        "version" : "6.6.0"
+      }
+    },
+    {
+      "identity" : "sdwebimage",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/SDWebImage/SDWebImage",
+      "state" : {
+        "revision" : "f6afa0132961d593f07970d84e2d8b588c29ea04",
+        "version" : "5.19.1"
+      }
+    },
+    {
+      "identity" : "then",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/devxoul/Then",
+      "state" : {
+        "revision" : "d41ef523faef0f911369f79c0b96815d9dbb6d7a",
+        "version" : "3.0.0"
+      }
+    }
+  ],
+  "version" : 3
+}

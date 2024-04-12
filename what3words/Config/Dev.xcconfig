@@ -1,0 +1,13 @@
+//
+//  Dev.xcconfig
+//  what3words
+//
+//  Created by Hùng Phạm on 10/4/24.
+//
+
+// Configuration settings file format documentation can be found at:
+// https://help.apple.com/xcode/#/dev745c5c974
+
+BUNDLE_ID = com.pt.hung1311.what3words.dev
+PRODUCT_NAME = what3words-dev
+INFO_PLIST_FILE = what3words/SupportFiles/Dev-Info.plist
