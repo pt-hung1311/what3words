@@ -58,9 +58,6 @@ extension TrendingViewModel: ViewModel {
         let movies = page.map { $0.items }
         
         movies
-            .do(onNext: { movies in
-                print(movies.map { $0.title })
-            })
             .drive(output.$movies)
             .disposed(by: disposeBag)
         
