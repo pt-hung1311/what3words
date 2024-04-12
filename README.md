@@ -26,4 +26,4 @@ Data Layer: Gateway Implementations + API (Network) + Database
 Presentation Layer: ViewModels + Views + Navigator + Scene Use Cases
 
 # Demo
-
+https://youtu.be/clw_YrU462g?si=TwKvW9OmAhJLJwog
