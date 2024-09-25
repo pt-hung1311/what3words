@@ -1,0 +1,312 @@
+//
+//  CenterCarouselView.swift
+//  Components
+//
+//  Created by Humg Pham on 29/8/24.
+//
+
+import SwiftUI
+import AudioToolbox
+import Combine
+
+final class CenterCarouselHandlerModel: ObservableObject {
+    @Published var current: IndexPath
+    @Published var items: [CarouselSection]
+    @Published var didSelectedAt: IndexPath?
+    let itemSpacing: CGFloat
+    let sectionSpacing: CGFloat
+    let itemWidth: CGFloat
+    let height: CGFloat
+    let isIgnoreLastItem: Bool
+    
+    var sectionsOffset: [ClosedRange<CGFloat>] {
+        let sectionsWidth = items.map { CGFloat($0.items.count) * itemWidth + CGFloat($0.items.count - 1) * itemSpacing }
+        var currentOffset: CGFloat = 0
+        return sectionsWidth.enumerated().map {
+            let result = ClosedRange(uncheckedBounds: (currentOffset, currentOffset + $0.element))
+            currentOffset += $0.element + sectionSpacing
+            return result
+        }
+    }
+    
+    var itemCount: Int {
+        items.flatMap { $0.items }.count
+    }
+    var sectionCount: Int {
+        items.count
+    }
+    var maxRange: CGFloat {
+        return CGFloat(itemCount) * itemWidth + CGFloat(itemCount - sectionCount) * itemSpacing + CGFloat(sectionCount - 1) * sectionSpacing
+    }
+    var dragBounds: ClosedRange<CGFloat> {
+        .init(uncheckedBounds: (0, maxRange))
+    }
+    
+    init(current: IndexPath,
+         items: [CarouselSection],
+         itemSpacing: CGFloat,
+         sectionSpacing: CGFloat,
+         itemWidth: CGFloat,
+         height: CGFloat,
+         isIgnoreLastItem: Bool
+    ) {
+        self.current = current
+        self.items = items
+        self.itemSpacing = itemSpacing
+        self.sectionSpacing = sectionSpacing
+        self.itemWidth = itemWidth
+        self.height = height
+        self.isIgnoreLastItem = isIgnoreLastItem
+    }
+}
+
+struct CenterCarouselScrollHandler<Content: View>: UIViewRepresentable {
+    let model: CenterCarouselHandlerModel
+    let width: CGFloat
+    let content: Content
+    
+    init(model: CenterCarouselHandlerModel,
+         width: CGFloat,
+         @ViewBuilder content: @escaping () -> Content) {
+        self.model = model
+        self.width = width
+        self.content = content()
+    }
+    
+    func makeCoordinator() -> Coordinator {
+        return Self.Coordinator(parent: self)
+    }
+    
+    func makeUIView(context: Context) -> UIScrollView {
+        let scrollView = UIScrollView()
+        scrollView.decelerationRate = .init(rawValue: 0.99349)
+        scrollView.showsHorizontalScrollIndicator = false
+        return scrollView
+    }
+    
+    func updateUIView(_ uiView: UIScrollView, context: Context) {
+        guard let swiftUIView = UIHostingController(rootView: content).view else {
+            return
+        }
+        uiView.subviews.forEach { $0.removeFromSuperview() }
+        let width = model.isIgnoreLastItem ? model.maxRange + width + model.itemSpacing: model.maxRange + width - model.itemWidth
+        swiftUIView.frame = CGRect(origin: .zero,
+                                   size: CGSize(width: width,
+                                                height: model.height))
+        let scrollContentWidth = model.isIgnoreLastItem ? width - model.itemWidth - model.itemSpacing : width
+        
+        uiView.contentSize = CGSize(width: scrollContentWidth,
+                                    height: model.height)
+        uiView.addSubview(swiftUIView)
+        uiView.delegate = context.coordinator
+        guard let indexPath = model.didSelectedAt else { return }
+        uiView.setContentOffset(getOffsetFrom(indexPath: indexPath), animated: true)
+        DispatchQueue.main.async {
+            self.model.didSelectedAt = nil
+        }
+    }
+    
+    class Coordinator: NSObject, UIScrollViewDelegate {
+        var parent: CenterCarouselScrollHandler
+        
+        init(parent: CenterCarouselScrollHandler) {
+            self.parent = parent
+        }
+        
+        func scrollViewDidScroll(_ scrollView: UIScrollView) {
+            guard let newValue = parent.getIndexFrom(offset: scrollView.contentOffset.x) else { return }
+if parent.model.current != newValue, parent.model.dragBounds.contains(scrollView.contentOffset.x) {
+                let fg = UIImpactFeedbackGenerator(style: .light)
+                fg.impactOccurred(intensity: 0.5)
+                AudioServicesPlayAlertSound(kSystemSoundID_Vibrate)
+                AudioServicesPlayAlertSound(1157)
+            }
+            DispatchQueue.main.async {
+                self.parent.model.current = newValue
+            }
+        }
+        
+        func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
+            guard let newValue = parent.getIndexFrom(offset: scrollView.contentOffset.x) else {
+                scrollView.setContentOffset(parent.getOffsetFrom(indexPath: parent.model.current),
+                                            animated: true)
+                return
+            }
+            scrollView.setContentOffset(parent.getOffsetFrom(indexPath: newValue),
+                                        animated: true)
+        }
+        
+        func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
+            if !decelerate {
+                guard let newValue = parent.getIndexFrom(offset: scrollView.contentOffset.x) else {
+                    scrollView.setContentOffset(parent.getOffsetFrom(indexPath: parent.model.current),
+                                                animated: true)
+                    return
+                }
+                scrollView.setContentOffset(parent.getOffsetFrom(indexPath: newValue),
+                                            animated: true)
+                let fg = UIImpactFeedbackGenerator(style: .light)
+                fg.impactOccurred(intensity: 0.5)
+            }
+        }
+    }
+    
+    func getOffsetFrom(indexPath: IndexPath) -> CGPoint {
+        let itemWidth = model.itemWidth + model.itemSpacing
+        let newOffset = CGFloat(indexPath.item) * itemWidth + model.sectionsOffset[indexPath.section].lowerBound
+        return CGPoint(x: newOffset, y: 0)
+    }
+    
+    func getIndexFrom(offset: CGFloat) -> IndexPath? {
+        let offset = offset + model.itemWidth / 2 // model.itemWidth / 2 is
+        let itemWidth = model.itemWidth + model.itemSpacing
+        
+        let section = getSection(offset: offset)
+        guard let section = section else { return nil }
+        let item = (offset - section.1.lowerBound) / itemWidth
+        
+        return IndexPath(item: Int(item), section: Int(section.0))
+    }
+    
+    func getSection(offset: CGFloat) -> (Int, ClosedRange<CGFloat>)? {
+        return model.sectionsOffset.enumerated().first { $0.element.contains(offset) }
+    }
+}
+
+struct CenterCarouselView<Content: View>: View {
+    @ObservedObject var model: CenterCarouselHandlerModel
+    let content: Content
+    @State var scrollPosition: Int?
+    
+    init(model: CenterCarouselHandlerModel,
+         @ViewBuilder content: @escaping (() -> Content)) {
+        self.model = model
+        self.content = content()
+    }
+    
+    var body: some View {
+        let _ = Self._printChanges()
+        GeometryReader { proxy in
+            VStack {
+                Text("\(model.current.section) \(model.current.item)")
+                CenterCarouselScrollHandler(
+                    model: model,
+                    width: proxy.size.width
+                ) {
+                    HStack(spacing: model.itemSpacing) {
+                        ForEach(0 ..< model.items.count - 1, id: \.self) { section in
+                            ForEach(0 ..< model.items[section].items.count, id: \.self) { item in
+                                content
+                                    .onTapGesture {
+                                        model.didSelectedAt = IndexPath(item: item, section: section)
+                                    }
+                            }
+                            Rectangle()
+                                .fill(.clear)
+                                .frame(width: model.sectionSpacing - model.itemSpacing * 2)
+                        }
+ForEach(0 ..< model.items[model.items.count - 1].items.count, id: \.self) { item in
+                            content
+                                .onTapGesture {
+                                    model.didSelectedAt = IndexPath(item: item, section: model.items.count - 1)
+                                }
+                        }
+                        
+                        if model.isIgnoreLastItem {
+                            content
+                                .onTapGesture {
+                                    print("Tap last item")
+                                }
+                        }
+                    }
+                }
+                .frame(height: model.height)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(lineWidth: 2)
+                        .fill(.red)
+                        .frame(width: model.itemWidth, height: model.height)
+                )
+            }
+        }
+    }
+    
+    func getOffsetFrom(indexPath: IndexPath) -> CGPoint {
+        let itemWidth = model.itemWidth + model.itemSpacing
+        let newOffset = CGFloat(indexPath.item) * itemWidth + model.sectionsOffset[indexPath.section].lowerBound
+        return CGPoint(x: newOffset, y: 0)
+    }
+}
+
+struct CarouselItem: Identifiable {
+    let id = UUID()
+    let index: Int
+}
+
+struct CarouselSection: Identifiable {
+    let id = UUID()
+    var items: [CarouselItem]
+}
+
+#Preview {
+    struct PreviewWrapper: View {
+        @StateObject var model = CenterCarouselHandlerModel(
+            current: IndexPath(item: 0, section: 0),
+            items: [
+                CarouselSection(items: [
+                    CarouselItem(index: 0),
+                    CarouselItem(index: 1),
+                    CarouselItem(index: 2),
+                ]),
+                CarouselSection(items: [
+                    CarouselItem(index: 3),
+                    CarouselItem(index: 4),
+                    CarouselItem(index: 5),
+                    CarouselItem(index: 6),
+                    CarouselItem(index: 7),
+                ]),
+                CarouselSection(items: [
+                    CarouselItem(index: 8),
+                    CarouselItem(index: 9),
+                    CarouselItem(index: 10),
+                ])
+            ],
+            itemSpacing: 10,
+            sectionSpacing: 50,
+            itemWidth: 100,
+            height: 80,
+            isIgnoreLastItem: true)
+        let itemWidth: CGFloat = 100
+        let itemHeight: CGFloat = 80
+        
+        var body: some View {
+            return VStack {
+                CenterCarouselView(model: model) {
+                    RoundedRectangle(cornerRadius: 8)
+                        .frame(width: itemWidth, height: itemHeight)
+                }
+                
+                Button("Tap") {
+                    model.items = [
+                        CarouselSection(items: [
+                            CarouselItem(index: 3),
+                            CarouselItem(index: 4),
+                            CarouselItem(index: 5),
+                            CarouselItem(index: 6),
+                            CarouselItem(index: 7),
+                        ]),
+                        CarouselSection(items: [
+                            CarouselItem(index: 8),
+                            CarouselItem(index: 9),
+                            CarouselItem(index: 10),
+                        ])
+                    ]
+                }
+            }
+        }
+    }
+    
+    return PreviewWrapper()
+}
+
+// 393
